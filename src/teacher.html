@@ -2,122 +2,166 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Teacher Dashboard | GradSystem</title>
+    <title>Instructor Dashboard | GradSystem</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 </head>
-<body class="bg-slate-50 min-h-screen">
-    <nav class="bg-white border-b px-8 py-4 flex justify-between items-center sticky top-0 z-50">
-        <h1 class="text-xl font-bold text-blue-600">GradSystem <span class="text-slate-400">| Teacher</span></h1>
-        <button onclick="auth.signOut(); window.location.href='index.html';" class="text-slate-500 hover:text-red-600 font-bold">Logout</button>
+<body class="bg-[#F8FAFC] min-h-screen font-sans text-slate-900">
+    <nav class="bg-white border-b border-slate-100 px-10 py-5 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-blue-200">G</div>
+                <h1 class="text-xl font-bold tracking-tight text-slate-800">GradSystem <span class="text-slate-300 font-medium">| Teacher</span></h1>
+            </div>
+            <div class="h-6 w-[1px] bg-slate-200 mx-2"></div>
+            <p class="text-sm font-bold text-slate-600">Instructor: <span id="teacherNameDisplay" class="text-blue-600">Teacher</span></p>
+        </div>
+        <button onclick="auth.signOut(); window.location.href='index.html';" class="text-xs font-bold text-slate-400 hover:text-red-500 transition-all">Logout</button>
     </nav>
 
-    <main class="max-w-7xl mx-auto p-8">
-        <div class="flex justify-between items-center mb-10">
-            <h2 class="text-3xl font-bold text-slate-800">Classroom Management</h2>
-            <button onclick="toggleModal('taskModal')" class="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg font-bold">Create Assignment</button>
+    <main class="max-w-7xl mx-auto p-10 grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <div class="lg:col-span-1 space-y-6">
+            <div class="flex justify-between items-center px-2">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Tasks</h3>
+                <button onclick="document.getElementById('taskModal').classList.remove('hidden')" class="text-blue-600 font-bold text-xs hover:underline">+ New Task</button>
+            </div>
+            <div id="sidebarTasks" class="space-y-3"></div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div class="lg:col-span-1 space-y-4">
-                <h3 class="font-black text-[10px] text-slate-400 uppercase tracking-widest">Assignments</h3>
-                <div id="assignmentList" class="space-y-3"></div>
-            </div>
-            <div class="lg:col-span-3 bg-white rounded-3xl border overflow-hidden">
-                <div class="bg-slate-50 px-8 py-5 border-b flex justify-between items-center">
-                    <h3 class="font-bold text-slate-800">Student Submissions</h3>
-                    <span id="activeTaskTitle" class="text-[10px] font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">SELECT A TASK</span>
+        <div class="lg:col-span-3 space-y-10">
+            <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden min-h-[400px]">
+                <div class="bg-slate-50/50 px-8 py-5 border-b border-slate-100 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-800" id="currentTaskTitle">Classroom Performance</h3>
                 </div>
-                <div id="submissionGrid" class="divide-y divide-slate-100 min-h-[400px]">
-                    <div class="p-20 text-center text-slate-400">Select an assignment to view work.</div>
+                <div id="submissionFeed" class="divide-y divide-slate-50"></div>
+            </div>
+
+            <div class="bg-slate-900 rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden">
+                <div class="relative z-10">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-2xl font-black">Performance Leaderboard</h3>
+                        <div class="bg-slate-800 p-1 rounded-xl flex gap-1">
+                            <button onclick="switchRankView('overall')" id="btn-overall" class="px-4 py-2 bg-blue-600 rounded-lg text-[10px] font-black transition-all">OVERALL</button>
+                            <button onclick="switchRankView('task')" id="btn-task" class="px-4 py-2 text-slate-500 rounded-lg text-[10px] font-black transition-all">SUBJECT</button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center items-end gap-6 mb-16">
+                        <div class="text-center"><span id="p2-name" class="text-[10px] font-bold text-slate-500 mb-2 block truncate w-20 mx-auto">--</span><div class="w-20 h-24 bg-slate-800 rounded-t-2xl border-x border-t border-slate-700 flex items-center justify-center font-black">2</div></div>
+                        <div class="text-center"><span id="p1-name" class="text-[10px] font-black text-yellow-400 mb-2 uppercase tracking-widest block truncate w-24 mx-auto">🥇 Champ</span><div class="w-24 h-32 bg-slate-800 rounded-t-2xl border-x border-t border-yellow-500/30 text-yellow-400 flex items-center justify-center font-black text-4xl shadow-xl">1</div></div>
+                        <div class="text-center"><span id="p3-name" class="text-[10px] font-bold text-slate-500 mb-2 block truncate w-20 mx-auto">--</span><div class="w-20 h-16 bg-slate-800 rounded-t-2xl border-x border-t border-slate-700 flex items-center justify-center font-black">3</div></div>
+                    </div>
+
+                    <div id="rankSubTabs" class="hidden flex flex-wrap gap-2 mb-8 p-4 bg-slate-800/50 rounded-2xl border border-slate-700"></div>
+
+                    <div id="rankList" class="divide-y divide-slate-800/50"></div>
                 </div>
             </div>
         </div>
     </main>
 
-    <div id="taskModal" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl">
-            <h3 class="text-2xl font-bold mb-6">New Assignment</h3>
-            <div class="space-y-4">
-                <input type="text" id="taskTitle" placeholder="Title" class="w-full p-4 border rounded-xl outline-none">
-                <textarea id="taskKey" placeholder="Answer Key..." class="w-full p-4 border rounded-xl h-32 bg-slate-50 font-mono text-sm"></textarea>
-                <input type="file" id="refPdf" accept=".pdf" class="w-full text-xs">
-                <div class="flex gap-4">
-                    <button onclick="saveAssignment()" class="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold">Launch</button>
-                    <button onclick="toggleModal('taskModal')" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-xl font-bold">Cancel</button>
-                </div>
+    <div id="taskModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-[2.5rem] p-10 w-full max-w-lg shadow-2xl">
+            <h3 class="text-2xl font-black text-slate-800 mb-6">Create New Task</h3>
+            <div class="space-y-5">
+                <input type="text" id="taskTitle" placeholder="Assignment Title" class="w-full p-4 border rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+                <textarea id="taskKey" placeholder="Detailed Answer Key..." class="w-full p-4 border rounded-2xl bg-slate-50 text-sm h-32 outline-none"></textarea>
+                <input type="file" id="refPdf" accept=".pdf" class="text-xs text-slate-500">
+                <button id="launchBtn" onclick="saveAssignment()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black">LAUNCH TASK</button>
+                <button onclick="document.getElementById('taskModal').classList.add('hidden')" class="w-full text-slate-400 font-bold text-xs py-2">Cancel</button>
             </div>
         </div>
     </div>
 
     <script src="config.js"></script>
     <script>
-        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
-
-        auth.onAuthStateChanged(user => {
-            if (user) { loadAssignments(user.uid); }
-            else { window.location.href = 'index.html'; }
+        let userMap = {}, allSubs = [], currentRankView = 'overall', assignments = [];
+        auth.onAuthStateChanged(async user => {
+            if (!user) return window.location.href = 'index.html';
+            const uSnap = await db.collection('users').get();
+            uSnap.forEach(u => userMap[u.id] = u.data().name || "Unknown");
+            document.getElementById('teacherNameDisplay').innerText = userMap[user.uid] || "Teacher";
+            loadTeacher(user.uid);
         });
 
-        function loadAssignments(uid) {
+        function loadTeacher(uid) {
             db.collection('assignments').where('teacher_id', '==', uid).onSnapshot(snap => {
-                const list = document.getElementById('assignmentList');
-                list.innerHTML = '';
+                const side = document.getElementById('sidebarTasks'), subTabs = document.getElementById('rankSubTabs');
+                side.innerHTML = ''; subTabs.innerHTML = ''; assignments = [];
                 snap.forEach(doc => {
-                    const t = doc.data();
-                    list.innerHTML += `
-                        <div class="bg-white p-4 rounded-xl border flex justify-between items-center group shadow-sm hover:border-blue-500">
-                            <div onclick="viewSubmissions('${doc.id}', '${t.title}')" class="cursor-pointer flex-1">
-                                <h4 class="font-bold text-slate-800">${t.title}</h4>
-                            </div>
-                            <button onclick="deleteAssignment('${doc.id}')" class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 font-bold transition">Delete</button>
-                        </div>`;
+                    const t = doc.data(); assignments.push({id: doc.id, ...t});
+                    side.innerHTML += `<div onclick="viewWork('${doc.id}', '${t.title}')" class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm cursor-pointer hover:border-blue-500 transition-all">
+                        <h4 class="font-bold text-slate-800 text-sm">${t.title}</h4>
+                        <p class="text-[9px] text-slate-400 font-black uppercase mt-1 tracking-widest">Review Activity</p>
+                    </div>`;
+                    subTabs.innerHTML += `<button onclick="renderRankings('${doc.id}')" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border border-slate-700 bg-slate-900 hover:bg-blue-600 transition-all">${t.title}</button>`;
                 });
             });
-        }
 
-        function viewSubmissions(taskId, title) {
-            document.getElementById('activeTaskTitle').innerText = title.toUpperCase();
-            db.collection('submissions').where('assignment_id', '==', taskId).onSnapshot(snap => {
-                const grid = document.getElementById('submissionGrid');
-                grid.innerHTML = snap.empty ? '<div class="p-20 text-center text-slate-400">No submissions yet.</div>' : '';
-                snap.forEach(doc => {
-                    const s = doc.data();
-                    grid.innerHTML += `
-                        <div class="flex items-center justify-between px-8 py-5 hover:bg-slate-50">
-                            <p class="font-bold text-slate-800">Student: ${s.student_id.substring(0,8)}...</p>
-                            <div class="flex items-center gap-6">
-                                <p class="text-xl font-black">${s.ai_score || '--'}/10</p>
-                                <button onclick="window.location.href='results.html?id=${doc.id}'" class="bg-slate-900 text-white px-5 py-2 rounded-lg text-xs font-bold">ANALYZE</button>
-                            </div>
-                        </div>`;
-                });
+            db.collection('submissions').where('status', '==', 'graded_by_ai').onSnapshot(snap => {
+                allSubs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                renderRankings();
             });
         }
 
         async function saveAssignment() {
-            const pdfFile = document.getElementById('refPdf').files[0];
-            let pdfUrl = "";
+            const btn = document.getElementById('launchBtn'), pdfFile = document.getElementById('refPdf').files[0];
+            let pdfUrl = ""; btn.disabled = true; btn.innerText = "Launching...";
             if (pdfFile) {
                 const ref = storage.ref(`assignments/refs/${Date.now()}_${pdfFile.name}`);
-                await ref.put(pdfFile);
-                pdfUrl = await ref.getDownloadURL();
+                await ref.put(pdfFile); pdfUrl = await ref.getDownloadURL();
             }
-            await db.collection('assignments').add({
-                title: document.getElementById('taskTitle').value,
-                answer_key: document.getElementById('taskKey').value,
-                reference_url: pdfUrl,
-                teacher_id: auth.currentUser.uid,
-                created_at: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            toggleModal('taskModal');
+            await db.collection('assignments').add({ title: document.getElementById('taskTitle').value, answer_key: document.getElementById('taskKey').value, reference_url: pdfUrl, teacher_id: auth.currentUser.uid, created_at: firebase.firestore.FieldValue.serverTimestamp() });
+            document.getElementById('taskModal').classList.add('hidden'); btn.disabled = false;
         }
 
-        async function deleteAssignment(id) {
-            if (confirm("Delete assignment?")) { await db.collection('assignments').doc(id).delete(); }
+        function viewWork(id, title) {
+            document.getElementById('currentTaskTitle').innerText = title;
+            db.collection('submissions').where('assignment_id', '==', id).onSnapshot(snap => {
+                const feed = document.getElementById('submissionFeed'); feed.innerHTML = '';
+                snap.forEach(doc => {
+                    const s = doc.data();
+                    feed.innerHTML += `<div class="px-8 py-6 flex items-center justify-between hover:bg-slate-50 transition-all">
+                        <div><p class="font-bold text-slate-800 text-sm">${userMap[s.student_id] || 'Student'}</p><p class="text-[9px] font-black text-blue-500 uppercase tracking-widest">ID: ${doc.id.substring(0,6)}</p></div>
+                        <div class="flex items-center gap-8"><p class="text-xl font-black text-slate-800">${s.ai_score || '--'}/10</p>
+                        <button onclick="window.location.href='results.html?id=${doc.id}'" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-200">ANALYZE</button></div>
+                    </div>`;
+                });
+            });
+        }
+
+        function switchRankView(view) {
+            currentRankView = view;
+            document.getElementById('btn-overall').className = view === 'overall' ? 'px-4 py-2 bg-blue-600 rounded-lg text-[10px] font-black' : 'px-4 py-2 text-slate-500 rounded-lg text-[10px] font-black';
+            document.getElementById('btn-task').className = view === 'task' ? 'px-4 py-2 bg-blue-600 rounded-lg text-[10px] font-black' : 'px-4 py-2 text-slate-500 rounded-lg text-[10px] font-black';
+            document.getElementById('rankSubTabs').classList.toggle('hidden', view !== 'task');
+            if(view === 'task' && assignments.length > 0) renderRankings(assignments[0].id); else renderRankings();
+        }
+
+        function renderRankings(taskId = null) {
+            const list = document.getElementById('rankList');
+            let studentMatrix = {};
+            allSubs.forEach(s => {
+                if (currentRankView === 'task' && s.assignment_id !== taskId) return;
+                const sid = s.student_id, time = s.created_at?.toMillis() || 0;
+                if (currentRankView === 'overall') {
+                    if (!studentMatrix[sid]) studentMatrix[sid] = {};
+                    if (!studentMatrix[sid][s.assignment_id] || time > studentMatrix[sid][s.assignment_id].time) studentMatrix[sid][s.assignment_id] = { score: s.ai_score, time: time };
+                } else {
+                    if (!studentMatrix[sid] || time > studentMatrix[sid].time) studentMatrix[sid] = { score: s.ai_score, time: time };
+                }
+            });
+            let leaderboard = Object.keys(studentMatrix).map(sid => {
+                let score = (currentRankView === 'overall') ? (Object.values(studentMatrix[sid]).reduce((a,c) => a+c.score, 0) / Object.values(studentMatrix[sid]).length) : studentMatrix[sid].score;
+                return { name: userMap[sid] || "Student", score: score };
+            }).sort((a,b) => b.score - a.score);
+            document.getElementById('p1-name').innerText = leaderboard[0]?.name || '--';
+            document.getElementById('p2-name').innerText = leaderboard[1]?.name || '--';
+            document.getElementById('p3-name').innerText = leaderboard[2]?.name || '--';
+            list.innerHTML = leaderboard.map((s, i) => `<div class="flex items-center justify-between py-5 border-b border-slate-800/30 last:border-0"><span class="text-xs font-black text-slate-500 w-8">#${i+1}</span><span class="font-bold text-slate-300 text-sm flex-1">${s.name}</span><span class="font-black text-blue-400 text-sm">${s.score.toFixed(1)}</span></div>`).join('');
         }
     </script>
 </body>
