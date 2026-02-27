@@ -2,41 +2,50 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Student Dashboard | GradSystem</title>
+    <title>Student Center | GradSystem</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 </head>
-<body class="bg-[#F8FAFC] min-h-screen">
-    <nav class="bg-white px-10 py-5 flex justify-between items-center border-b border-slate-100 sticky top-0 z-50">
+<body class="bg-[#F8FAFC] min-h-screen font-sans text-slate-900">
+    <nav class="bg-white px-10 py-5 flex justify-between items-center border-b border-slate-100 sticky top-0 z-50 shadow-sm">
         <div class="flex items-center gap-6">
             <h1 class="text-xl font-bold text-blue-600">GradSystem</h1>
-            <p class="text-sm font-bold text-slate-600">Welcome back, <span id="studentNameDisplay" class="text-blue-600">--</span></p>
+            <p class="text-sm font-bold text-slate-600">Welcome, <span id="studentNameDisplay" class="text-blue-600">--</span></p>
         </div>
         <button onclick="auth.signOut(); window.location.href='index.html';" class="text-xs font-bold text-slate-400 hover:text-red-500">Logout</button>
     </nav>
 
     <main class="max-w-[1600px] mx-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div class="lg:col-span-3 space-y-6">
-            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Your History</h3>
+            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Your Submissions</h3>
             <div id="historyList" class="space-y-3"></div>
         </div>
 
         <div class="lg:col-span-5 space-y-6">
-            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Available Tasks</h3>
+            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Available Assignments</h3>
             <div id="taskList" class="space-y-4"></div>
         </div>
 
         <div class="lg:col-span-4">
-            <div class="bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100">
-                <h3 class="text-xl font-black mb-10">Class Rankings</h3>
-                <div class="flex justify-center items-end gap-4 mb-12 h-32">
-                    <div class="text-center"><span id="p2" class="text-[10px] font-bold text-slate-400 mb-2 block truncate w-16 mx-auto">--</span><div class="w-14 h-16 bg-slate-50 rounded-t-2xl border flex items-center justify-center font-black">2</div></div>
-                    <div class="text-center"><span id="p1" class="text-[10px] font-black text-yellow-600 mb-2 uppercase block truncate w-20 mx-auto">--</span><div class="w-16 h-24 bg-yellow-50 rounded-t-2xl border border-yellow-200 flex items-center justify-center font-black text-yellow-500 text-2xl shadow-lg">1</div></div>
-                    <div class="text-center"><span id="p3" class="text-[10px] font-bold text-slate-400 mb-2 block truncate w-14 mx-auto">--</span><div class="w-14 h-12 bg-slate-50 rounded-t-2xl border flex items-center justify-center font-black">3</div></div>
+            <div class="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/40">
+                <div class="flex justify-between items-center mb-10">
+                    <h3 class="text-xl font-black">Class Rankings</h3>
+                    <div class="bg-slate-100 p-1 rounded-xl flex gap-1">
+                        <button onclick="switchTab('overall')" id="tab-overall" class="px-4 py-2 bg-white rounded-lg text-[10px] font-black shadow-sm text-blue-600 transition-all">OVERALL</button>
+                        <button onclick="switchTab('task')" id="tab-task" class="px-4 py-2 text-slate-400 rounded-lg text-[10px] font-black transition-all">TASK</button>
+                    </div>
                 </div>
+
+                <div class="flex justify-center items-end gap-4 mb-12 h-32">
+                    <div class="text-center"><span id="p2" class="text-[10px] font-bold text-slate-400 mb-2 block truncate w-16 mx-auto">--</span><div class="w-14 h-16 bg-slate-50 rounded-t-2xl border-x border-t flex items-center justify-center font-black text-slate-300">2</div></div>
+                    <div class="text-center"><span id="p1" class="text-[10px] font-black text-yellow-600 mb-2 uppercase block truncate w-20 mx-auto">🥇 Top</span><div class="w-16 h-24 bg-yellow-50 rounded-t-2xl border-x border-t border-yellow-200 flex items-center justify-center font-black text-yellow-500 text-2xl shadow-xl">1</div></div>
+                    <div class="text-center"><span id="p3" class="text-[10px] font-bold text-slate-400 mb-2 block truncate w-14 mx-auto">--</span><div class="w-14 h-12 bg-slate-50 rounded-t-2xl border-x border-t flex items-center justify-center font-black text-slate-300">3</div></div>
+                </div>
+
+                <div id="subTabRow" class="hidden flex flex-wrap gap-2 mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100"></div>
                 <div id="rankList" class="divide-y divide-slate-50"></div>
             </div>
         </div>
@@ -46,17 +55,21 @@
         <div class="bg-white rounded-[2.5rem] p-10 w-full max-w-md shadow-2xl">
             <h3 class="text-2xl font-black text-slate-800 mb-6">Submit Work</h3>
             <div class="space-y-5">
-                <select id="taskSelect" class="w-full p-4 border rounded-2xl bg-slate-50 text-sm font-bold"></select>
-                <input type="file" id="workImg" accept="image/*" class="text-xs text-slate-500">
-                <button id="uploadBtn" onclick="handleUpload()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black">UPLOAD & GRADE</button>
-                <button onclick="document.getElementById('uploadModal').classList.add('hidden')" class="w-full text-slate-400 font-bold text-xs py-2">Cancel</button>
+                <select id="taskSelect" class="w-full p-4 border rounded-2xl bg-slate-50 text-sm font-bold outline-none"></select>
+                <div class="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center bg-slate-50">
+                    <input type="file" id="workImg" accept="image/*" class="text-xs text-slate-500">
+                </div>
+                <button id="uploadBtn" onclick="handleUpload()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg">UPLOAD & GRADE</button>
+                <button onclick="toggleModal('uploadModal')" class="w-full text-slate-400 font-bold text-xs py-2">Cancel</button>
             </div>
         </div>
     </div>
 
     <script src="config.js"></script>
     <script>
-        let studentMap = {}, gradedSubs = [], assignments = [];
+        let currentTab = 'overall', studentMap = {}, gradedSubs = [], assignments = [];
+        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+
         auth.onAuthStateChanged(async user => {
             if (!user) return window.location.href = 'index.html';
             const uSnap = await db.collection('users').get();
@@ -67,57 +80,87 @@
 
         async function loadData(uid) {
             db.collection('assignments').onSnapshot(snap => {
-                const list = document.getElementById('taskList'), select = document.getElementById('taskSelect');
-                list.innerHTML = ''; select.innerHTML = ''; assignments = [];
+                const list = document.getElementById('taskList'), select = document.getElementById('taskSelect'), subTabs = document.getElementById('subTabRow');
+                list.innerHTML = ''; select.innerHTML = ''; subTabs.innerHTML = ''; assignments = [];
                 snap.forEach(doc => {
                     const t = doc.data(); assignments.push({id: doc.id, ...t});
-                    list.innerHTML += `<div class="bg-white p-6 rounded-3xl border border-slate-100 flex justify-between items-center shadow-sm">
-                        <div><h4 class="font-bold text-slate-800">${t.title}</h4></div>
-                        <div class="flex gap-3">
+                    list.innerHTML += `<div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-4">
+                        <div class="flex justify-between items-start">
+                            <div><h4 class="font-bold text-slate-800">${t.title}</h4><p class="text-[10px] text-slate-400 mt-1 uppercase font-bold">New Task</p></div>
                             ${t.reference_url ? `<a href="${t.reference_url}" target="_blank" class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-xs font-black">QUESTIONS</a>` : ''}
-                            <button onclick="openUpload('${doc.id}')" class="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black">SUBMIT</button>
                         </div>
+                        <button onclick="openUpload('${doc.id}')" class="w-full bg-slate-900 text-white py-3 rounded-2xl text-xs font-black hover:bg-blue-600 transition-all">START SUBMISSION</button>
                     </div>`;
                     select.innerHTML += `<option value="${doc.id}">${t.title}</option>`;
+                    subTabs.innerHTML += `<button onclick="renderRankings('${doc.id}')" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border border-slate-200 bg-white hover:border-blue-600 transition-all">${t.title}</button>`;
                 });
                 loadHistory(uid);
             });
 
             db.collection('submissions').where('status', '==', 'graded_by_ai').onSnapshot(snap => {
-                gradedSubs = snap.docs.map(d => ({id: d.id, ...d.data()})); renderRankings();
+                gradedSubs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                renderRankings();
             });
         }
 
         function loadHistory(uid) {
             db.collection('submissions').where('student_id', '==', uid).onSnapshot(snap => {
-                const list = document.getElementById('historyList'); list.innerHTML = '';
+                const list = document.getElementById('historyList');
+                list.innerHTML = '';
                 const sorted = snap.docs.sort((a,b) => b.data().created_at?.toMillis() - a.data().created_at?.toMillis());
                 sorted.forEach(doc => {
                     const s = doc.data(), subject = assignments.find(a => a.id === s.assignment_id)?.title || "Subject";
-                    list.innerHTML += `<div onclick="window.location.href='results.html?id=${doc.id}'" class="bg-white p-5 rounded-2xl border flex justify-between items-center cursor-pointer hover:border-blue-500">
-                        <span class="font-bold text-slate-700 text-sm truncate">${subject}</span>
-                        <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs font-black">${s.ai_score || '--'}/10</span>
+                    list.innerHTML += `<div onclick="window.location.href='results.html?id=${doc.id}'" class="bg-white p-5 rounded-2xl border border-slate-100 flex justify-between items-center cursor-pointer hover:border-blue-500 transition-all shadow-sm">
+                        <span class="font-bold text-slate-700 text-sm truncate pr-4">${subject}</span>
+                        <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-[10px] font-black">${s.ai_score || '--'}/10</span>
                     </div>`;
                 });
             });
         }
 
-        function openUpload(id) { document.getElementById('taskSelect').value = id; document.getElementById('uploadModal').classList.remove('hidden'); }
+        function switchTab(view) {
+            currentTab = view;
+            document.getElementById('tab-overall').className = view === 'overall' ? 'px-4 py-2 bg-white rounded-lg text-[10px] font-black shadow-sm text-blue-600 transition-all' : 'px-4 py-2 text-slate-400 rounded-lg text-[10px] font-black transition-all';
+            document.getElementById('tab-task').className = view === 'task' ? 'px-4 py-2 bg-white rounded-lg text-[10px] font-black shadow-sm text-blue-600 transition-all' : 'px-4 py-2 text-slate-400 rounded-lg text-[10px] font-black transition-all';
+            document.getElementById('subTabRow').classList.toggle('hidden', view !== 'task');
+            if(view === 'task' && assignments.length > 0) renderRankings(assignments[0].id); else renderRankings();
+        }
 
-        function renderRankings() {
-            let matrix = {};
+        function renderRankings(taskId = null) {
+            const list = document.getElementById('rankList');
+            let latestScores = {}; // Key: "studentID_assignmentID"
+
             gradedSubs.forEach(s => {
-                const sid = s.student_id, time = s.created_at?.toMillis() || 0;
-                if (!matrix[sid]) matrix[sid] = {};
-                if (!matrix[sid][s.assignment_id] || time > matrix[sid][s.assignment_id].time) matrix[sid][s.assignment_id] = { score: s.ai_score, time: time };
+                if (currentTab === 'task' && s.assignment_id !== taskId) return;
+                const sid = s.student_id, aid = s.assignment_id, comboKey = `${sid}_${aid}`;
+                const time = s.created_at?.toMillis() || 0;
+
+                // LATEST WORK ONLY: Replace if newer timestamp found
+                if (!latestScores[comboKey] || time > latestScores[comboKey].time) {
+                    latestScores[comboKey] = { sid: sid, score: s.ai_score, time: time };
+                }
             });
 
-            let ranks = Object.keys(matrix).map(sid => ({ name: studentMap[sid], score: Object.values(matrix[sid]).reduce((a,c) => a+c.score, 0) / Object.values(matrix[sid]).length })).sort((a,b) => b.score - a.score);
-            document.getElementById('p1').innerText = ranks[0]?.name.split(' ')[0] || '--';
-            document.getElementById('p2').innerText = ranks[1]?.name.split(' ')[0] || '--';
-            document.getElementById('p3').innerText = ranks[2]?.name.split(' ')[0] || '--';
-            document.getElementById('rankList').innerHTML = ranks.map((s, i) => `<div class="flex items-center justify-between py-4 ${i < 3 ? 'bg-blue-50/20 px-4 rounded-xl' : ''}"><span class="font-bold text-slate-700 text-xs">${s.name}</span><span class="font-black text-slate-800 text-xs">${s.score.toFixed(1)}</span></div>`).join('');
+            let finalMap = {};
+            Object.values(latestScores).forEach(entry => {
+                if (!finalMap[entry.sid]) finalMap[entry.sid] = { scores: [], total: 0 };
+                finalMap[entry.sid].scores.push(entry.score);
+                finalMap[entry.sid].total += entry.score;
+            });
+
+            let leaderboard = Object.keys(finalMap).map(sid => {
+                const data = finalMap[sid];
+                return { name: studentMap[sid] || "Student", score: data.total / data.scores.length };
+            }).sort((a,b) => b.score - a.score);
+
+            document.getElementById('p1').innerText = leaderboard[0]?.name.split(' ')[0] || '--';
+            document.getElementById('p2').innerText = leaderboard[1]?.name.split(' ')[0] || '--';
+            document.getElementById('p3').innerText = leaderboard[2]?.name.split(' ')[0] || '--';
+
+            list.innerHTML = leaderboard.map((s, i) => `<div class="flex items-center justify-between py-4 ${i < 3 ? 'bg-blue-50/20 px-4 rounded-xl' : ''}"><span class="text-[9px] font-black text-slate-300 w-6">#${i+1}</span><span class="font-bold text-slate-700 text-xs flex-1">${s.name}</span><span class="font-black text-slate-800 text-xs">${s.score.toFixed(1)}</span></div>`).join('');
         }
+
+        function openUpload(id) { document.getElementById('taskSelect').value = id; toggleModal('uploadModal'); }
 
         async function handleUpload() {
             const btn = document.getElementById('uploadBtn'), file = document.getElementById('workImg').files[0], taskId = document.getElementById('taskSelect').value;
@@ -127,7 +170,7 @@
                 const ref = storage.ref(`submissions/${Date.now()}_${file.name}`);
                 await ref.put(file);
                 await db.collection('submissions').add({ assignment_id: taskId, image_url: await ref.getDownloadURL(), student_id: auth.currentUser.uid, status: 'pending', created_at: firebase.firestore.FieldValue.serverTimestamp() });
-                document.getElementById('uploadModal').classList.add('hidden'); btn.disabled = false;
+                toggleModal('uploadModal'); btn.disabled = false;
             } catch (err) { alert("Fail"); btn.disabled = false; }
         }
     </script>
