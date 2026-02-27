@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard | GradSystem</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    <style>
+        .spinner {
+            border: 3px solid rgba(59, 130, 246, 0.2);
+            border-radius: 50%;
+            border-top: 3px solid #3b82f6;
+            width: 18px;
+            height: 18px;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <nav class="bg-white border-b px-8 py-4 flex justify-between items-center sticky top-0 z-10">
+        <h1 class="text-xl font-bold text-blue-600">GradSystem <span class="text-slate-400">| Student</span></h1>
+        <div class="flex items-center gap-4">
+            <span id="studentName" class="text-sm font-medium text-slate-600">Loading...</span>
+            <button onclick="auth.signOut(); window.location.href='index.html';" class="text-slate-500 hover:text-red-600 font-medium text-sm">Logout</button>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-8">
+        <header class="mb-10">
+            <h2 class="text-3xl font-bold text-slate-800">My Assignments</h2>
+            <p class="text-slate-500">View tasks and upload your handwritten work.</p>
+        </header>
+
+        <div id="taskList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+    </main>
+
+    <div id="uploadModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl">
+            <h3 id="modalTaskTitle" class="text-2xl font-bold mb-2 text-slate-800">Upload Answer</h3>
+            <p id="modalTaskInstr" class="text-slate-500 text-sm mb-6"></p>
+
+            <div id="referenceSection" class="hidden mb-6 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">📄</span>
+                    <div>
+                        <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Reference Material</p>
+                        <p class="text-xs font-bold text-blue-700">Study this before answering</p>
+                    </div>
+                </div>
+                <a id="downloadRef" href="#" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200">OPEN</a>
+            </div>
+            
+            <div class="space-y-6">
+                <div id="dropZone" class="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:border-blue-400 transition-all bg-slate-50 cursor-pointer" onclick="document.getElementById('answerFile').click()">
+                    <div class="text-4xl mb-4">✍️</div>
+                    <p class="text-sm text-slate-600 font-medium">Click to select your handwriting photo</p>
+                    <p class="text-xs text-slate-400 mt-1">Accepts JPG, PNG (Max 5MB)</p>
+                    <input type="file" id="answerFile" class="hidden" onchange="updateFileName(this)">
+                    <p id="fileNameDisplay" class="mt-4 text-blue-600 font-bold text-xs"></p>
+                </div>
+
+                <div class="flex gap-4">
+                    <button id="submitBtn" onclick="submitAnswer()" class="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-3 hover:bg-blue-700 disabled:opacity-50 transition-all">
+                        <span id="subBtnText">Submit for Grading</span>
+                        <div id="subBtnLoader" class="spinner border-t-white hidden"></div>
+                    </button>
+                    <button onclick="toggleModal('uploadModal')" class="flex-1 bg-slate-100 text-slate-600 py-4 rounded-xl font-bold hover:bg-slate-200 transition">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        let currentUser = null;
+        let selectedTaskId = null;
+
+        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+        
+        function updateFileName(input) { 
+            document.getElementById('fileNameDisplay').innerText = input.files[0] ? `Selected: ${input.files[0].name}` : ''; 
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                loadStudentDashboard();
+            } else { window.location.href = 'index.html'; }
+        });
+
+        async function loadStudentDashboard() {
+            // 1. Fetch Profile Name directly from Firestore
+            const profile = await db.collection('users').doc(currentUser.uid).get();
+            if (profile.exists) {
+                document.getElementById('studentName').innerText = `Welcome, ${profile.data().name}`;
+            }
+
+            // 2. Real-time Assignment Feed
+            db.collection('assignments').onSnapshot(snap => {
+                const list = document.getElementById('taskList');
+                list.innerHTML = ''; 
+
+                snap.forEach(doc => {
+                    const task = doc.data();
+                    const taskId = doc.id;
+                    const subId = `${taskId}_${currentUser.uid}`;
+
+                    // Create Card Base
+                    const card = document.createElement('div');
+                    card.className = "bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow";
+                    card.innerHTML = `
+                        <div>
+                            <div class="flex justify-between items-start mb-4" id="stat-${subId}">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Checking Status...</span>
+                            </div>
+                            <h4 class="text-xl font-bold text-slate-800 mb-2">${task.title}</h4>
+                            <p class="text-sm text-slate-500 line-clamp-3">${task.instructions}</p>
+                        </div>
+                        <div id="btn-container-${subId}">
+                            <button class="w-full mt-6 bg-slate-100 text-slate-400 py-3 rounded-xl font-bold text-sm">Loading...</button>
+                        </div>
+                    `;
+                    list.appendChild(card);
+
+                    // 3. Nested Real-time Submission Status
+                    db.collection('submissions').doc(subId).onSnapshot(subSnap => {
+                        const statContainer = document.getElementById(`stat-${subId}`);
+                        const btnContainer = document.getElementById(`btn-container-${subId}`);
+                        
+                        let statusHtml = `<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Not Submitted</span>`;
+                        // Pass instructions and reference URL using backticks to handle potential newlines
+                        let actionBtn = `<button onclick="openUploadModal('${taskId}', '${task.title}', \`${task.instructions}\`, '${task.reference_url || ""}')" class="w-full mt-6 bg-slate-800 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-600 transition">Start Assignment</button>`;
+
+                        if (subSnap.exists) {
+                            const s = subSnap.data();
+                            if (s.status === 'pending') {
+                                statusHtml = `<div class="flex items-center gap-2"><div class="spinner"></div><span class="text-[10px] font-bold text-blue-600 uppercase">AI Grading...</span></div>`;
+                                actionBtn = `<button disabled class="w-full mt-6 bg-slate-100 text-slate-400 py-3 rounded-xl font-bold text-sm cursor-not-allowed">Processing Result</button>`;
+                            } else {
+                                statusHtml = `<span class="text-[10px] font-bold text-green-600 uppercase tracking-wider">Score: ${s.ai_score}/10</span>`;
+                                actionBtn = `<button onclick="window.location.href='results.html?id=${subId}'" class="w-full mt-6 bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700 transition">View Analytical Result</button>`;
+                            }
+                        }
+                        
+                        if(statContainer) statContainer.innerHTML = statusHtml;
+                        if(btnContainer) btnContainer.innerHTML = actionBtn;
+                    });
+                });
+            });
+        }
+
+        function openUploadModal(id, title, instr, refUrl) {
+            selectedTaskId = id;
+            document.getElementById('modalTaskTitle').innerText = title;
+            document.getElementById('modalTaskInstr').innerText = instr;
+
+            const refSection = document.getElementById('referenceSection');
+            const downloadBtn = document.getElementById('downloadRef');
+
+            // Handle Reference PDF Visibility
+            if (refUrl && refUrl !== "") {
+                refSection.classList.remove('hidden');
+                downloadBtn.href = refUrl;
+            } else {
+                refSection.classList.add('hidden');
+            }
+
+            toggleModal('uploadModal');
+        }
+
+        async function submitAnswer() {
+            const fileInput = document.getElementById('answerFile');
+            const file = fileInput.files[0];
+            if (!file) return alert("Please select a photo of your handwriting first.");
+
+            const btn = document.getElementById('submitBtn');
+            const loader = document.getElementById('subBtnLoader');
+            const btnText = document.getElementById('subBtnText');
+
+            btn.disabled = true;
+            btnText.innerText = "Uploading to Cloud...";
+            loader.classList.remove('hidden');
+
+            try {
+                // 1. Upload Sheet to Storage
+                const storageRef = storage.ref(`submissions/${selectedTaskId}/${currentUser.uid}_${Date.now()}.jpg`);
+                await storageRef.put(file);
+                const downloadURL = await storageRef.getDownloadURL();
+
+                // 2. Create Submission in Firestore
+                const subId = `${selectedTaskId}_${currentUser.uid}`;
+                await db.collection('submissions').doc(subId).set({
+                    submission_id: subId,
+                    assignment_id: selectedTaskId,
+                    student_id: currentUser.uid,
+                    image_url: downloadURL,
+                    status: "pending", // Triggers Python AI script
+                    ai_score: null,
+                    ai_feedback: null,
+                    submitted_at: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                toggleModal('uploadModal');
+                fileInput.value = ""; // Reset
+                document.getElementById('fileNameDisplay').innerText = "";
+            } catch (error) {
+                alert("Upload failed: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btnText.innerText = "Submit for Grading";
+                loader.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
